@@ -21,6 +21,10 @@ Parameters:
     Type: Number
     Default: 10
 
+  LoadBalancerFullName:
+    Description: The Application Load Balancer Full Name required for CW Alarms
+    Type: String
+
   Listener:
     Description: The Application Load Balancer listener to register with
     Type: String
@@ -55,7 +59,7 @@ Resources:
       ContainerDefinitions:
         - Name: petclinic-service
           Essential: true
-          Image: quitequiet/tomcat:8.5 #using empty tomcat container for now
+          Image: tomcat:8.5 #using empty tomcat container for now
           #Image: BUILD AND DEPLOY PETCLINIC IMAGE TO ECR
           #Image: 275396840892.dkr.ecr.us-east-1.amazonaws.com/ecs-refarch-cloudformation/website-service:1.0.0
           Memory: 1024
@@ -167,11 +171,11 @@ Resources:
       ScalingTargetId: !Ref ServiceScalableTarget
       StepScalingPolicyConfiguration:
         AdjustmentType: ChangeInCapacity
-        Cooldown: 1800
+        Cooldown: 180
         MetricAggregationType: Average
         StepAdjustments:
           - MetricIntervalLowerBound: 0
-            ScalingAdjustment: 1
+            ScalingAdjustment: 2
 
   ServiceScaleInPolicy:
     Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
@@ -181,48 +185,44 @@ Resources:
       ScalingTargetId: !Ref ServiceScalableTarget
       StepScalingPolicyConfiguration:
         AdjustmentType: ChangeInCapacity
-        Cooldown: 1800
+        Cooldown: 180
         MetricAggregationType: Average
         StepAdjustments:
           - MetricIntervalUpperBound: 0
-            ScalingAdjustment: -1
-
-  RequestScaleOutAlarm:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmName: Request count is more than 100 requests per one period
-      AlarmDescription: Alarm if request count is more than 100 requests per one period
-      Namespace: AWS/ELB
-      MetricName: Request­Count
-      Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt Service.Name
-      Statistic: Sum
-      Period: "60"
-      EvaluationPeriods: "3"
-      Threshold: "100"
-      ComparisonOperator: GreaterThanThreshold
-      AlarmActions:
-        - !Ref ServiceScaleOutPolicy
+            ScalingAdjustment: -2
 
   RequestScaleInAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: Request count is less than 10 per one period
-      AlarmDescription: Alarm if request count is less than 10 per one period
-      Namespace: AWS/ELB
-      MetricName: Request­Count
+      AlarmName: Request count is less than 5 per Target
+      AlarmDescription: Alarm if request count is less than 5 per Target per one period
+      Namespace: AWS/ApplicationELB
+      MetricName: RequestCountPerTarget
       Dimensions:
-        - Name: ClusterName
-          Value: !Ref Cluster
-        - Name: ServiceName
-          Value: !GetAtt Service.Name
+        - Name: TargetGroup
+          Value: !GetAtt TargetGroup.TargetGroupFullName
       Statistic: Sum
-      Period: "60"
-      EvaluationPeriods: "3"
-      Threshold: "10"
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 5
       ComparisonOperator: LessThanThreshold
       AlarmActions:
         - !Ref ServiceScaleInPolicy
+
+  RequestScaleOutAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: Request count is more than 50 requests per Target
+      AlarmDescription: Alarm if request count is more than 50 requests per Target per one period
+      Namespace: AWS/ApplicationELB
+      MetricName: RequestCountPerTarget
+      Dimensions:
+        - Name: TargetGroup
+          Value: !GetAtt TargetGroup.TargetGroupFullName
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 50
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+        - !Ref ServiceScaleOutPolicy

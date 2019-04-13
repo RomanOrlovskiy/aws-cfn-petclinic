@@ -53,9 +53,10 @@ Resources:
       Protocol: HTTP
 
 Outputs:
-  LoadBalancer:
+
+  LoadBalancerFullName:
     Description: A reference to the Application Load Balancer
-    Value: !Ref LoadBalancer
+    Value: !GetAtt LoadBalancer.LoadBalancerFullName
 
   LoadBalancerUrl:
     Description: The URL of the ALB
