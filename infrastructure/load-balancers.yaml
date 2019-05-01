@@ -19,6 +19,13 @@ Parameters:
     Description: Select the Security Group to apply to the Application Load Balancer
     Type: AWS::EC2::SecurityGroup::Id
 
+
+  SSLCertificateARN:
+    Description: Provide SSL Certificate ARN from your AWS AccountId
+    Type: String
+    Default: "arn:aws:acm:us-west-2:414831080620:certificate/d01732be-d3f4-481f-b94a-a4eedb2af2eb"
+
+
 Resources:
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
@@ -31,26 +38,59 @@ Resources:
         - Key: Name
           Value: !Ref EnvironmentName
 
-  LoadBalancerListener:
+  HttpsListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       LoadBalancerArn: !Ref LoadBalancer
-      Port: 80
-      Protocol: HTTP
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref SSLCertificateARN
+        # - CertificateArn: !Join
+        #       - ''
+        #       - - 'arn:aws:acm::' #or arn:aws:iam?
+        #         - !Ref 'AWS::AccountId'
+        #         - ':certificate/'
+        #         - !Ref SSLCertificateName
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref DefaultTargetGroup
+
+  HttpRedirectListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - RedirectConfig:
+            Port: "443"
+            Protocol: "HTTPS"
+            StatusCode: HTTP_301
+          Type: redirect
+      LoadBalancerArn: !Ref 'LoadBalancer'
+      Port: 80
+      Protocol: HTTP
 
   # We define a default target group here, as this is a mandatory Parameters
   # when creating an Application Load Balancer Listener. This is not used, instead
   # a target group is created per-service in each service template (../services/*)
   DefaultTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    # Properties:
+    #   Name: !Sub ${EnvironmentName}-default
+    #   VpcId: !Ref VPC
+    #   Port: 80
+    #   Protocol: HTTP
     Properties:
       Name: !Sub ${EnvironmentName}-default
       VpcId: !Ref VPC
       Port: 80
       Protocol: HTTP
+      Matcher:
+        HttpCode: 200-299
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
 
 Outputs:
 
@@ -62,6 +102,14 @@ Outputs:
     Description: The URL of the ALB
     Value: !GetAtt LoadBalancer.DNSName
 
-  Listener:
-    Description: A reference to a port 80 listener
-    Value: !Ref LoadBalancerListener
+  HttpsListener:
+    Description: A reference to a port 443 listener
+    Value: !Ref HttpsListener
+
+  DefaultTargetGroup:
+    Description: A default target group to register instances with
+    Value: !Ref DefaultTargetGroup
+
+  DefaultTargetGroupFullName:
+    Description: A default target full name
+    Value: !GetAtt DefaultTargetGroup.TargetGroupFullName

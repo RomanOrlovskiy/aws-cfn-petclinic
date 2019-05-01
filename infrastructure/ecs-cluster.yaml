@@ -10,16 +10,21 @@ Parameters:
   InstanceType:
     Description: Which instance type should we use to build the ECS cluster?
     Type: String
-    Default: t2.micro
+    Default: t2.medium
 
   ClusterSize:
     Description: How many ECS hosts do you want to initially deploy?
     Type: Number
-    Default: 4
+    Default: 2
 
-  VPC:
-    Description: Choose which VPC this ECS cluster should be deployed to
-    Type: AWS::EC2::VPC::Id
+  ClusterSizeMax:
+    Description: How many ECS hosts do you want to initially deploy?
+    Type: Number
+    Default: 6
+
+  # VPC:
+  #   Description: Choose which VPC this ECS cluster should be deployed to
+  #   Type: AWS::EC2::VPC::Id
 
   Subnets:
     Description: Choose which subnets this ECS cluster should be deployed to
@@ -34,6 +39,16 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ecs/optimized-ami/amazon-linux/recommended/image_id
 
+  PhoneNumberForSMSAlert:
+    Description: Add this initial cell for SMS notification of EC2 instance scale up/down alerts
+    Type: String
+    Default: "+380635321012"
+
+  AdminEmail:
+    Description: 'The email address of the admin who receives alerts.'
+    Type: String
+    Default: "romanorlovskiy92@gmail.com"
+
 Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
@@ -47,7 +62,7 @@ Resources:
       VPCZoneIdentifier: !Ref Subnets
       LaunchConfigurationName: !Ref ECSLaunchConfiguration
       MinSize: !Ref ClusterSize
-      MaxSize: !Ref ClusterSize
+      MaxSize: !Ref ClusterSizeMax
       DesiredCapacity: !Ref ClusterSize
       Tags:
         - Key: Name
@@ -69,6 +84,95 @@ Resources:
           - ScheduledActions
         WaitOnResourceSignals: true
 
+# A SNS topic is used to send alerts via Email to the value of the AdminEmail parameter
+  SMSAlert:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      Subscription:
+      - Endpoint: !Ref PhoneNumberForSMSAlert
+        Protocol: sms
+
+  EmailAlert:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      Subscription:
+      - Endpoint: !Ref AdminEmail
+        Protocol: email
+
+  ScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+        AdjustmentType: ChangeInCapacity
+        AutoScalingGroupName: !Ref ECSAutoScalingGroup
+        EstimatedInstanceWarmup: 180
+        MetricAggregationType: Average
+        PolicyType: StepScaling
+        StepAdjustments:
+            #70-105% - scale up by one instance. Everything more than 105% - scale up two instances
+             - MetricIntervalLowerBound: 0
+               MetricIntervalUpperBound: 35
+               ScalingAdjustment: 1
+             - MetricIntervalLowerBound: 35
+               ScalingAdjustment: 2
+
+  ScaleDownPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+        AdjustmentType: ChangeInCapacity
+        AutoScalingGroupName: !Ref ECSAutoScalingGroup
+        EstimatedInstanceWarmup: 180
+        MetricAggregationType: Average
+        PolicyType: StepScaling
+        StepAdjustments:
+              - MetricIntervalUpperBound: 0
+                ScalingAdjustment: -1
+
+  MemoryScaleUpAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+        ActionsEnabled: true
+        AlarmActions:
+        - !Ref ScaleUpPolicy
+        - !Ref SMSAlert
+        - !Ref EmailAlert
+        AlarmDescription: >
+            The memory utilization of the ECS cluster has exceeded 70% for more than
+            one minute. Breaching this alarm should trigger an ASG scale out.
+        ComparisonOperator: GreaterThanOrEqualToThreshold
+        Dimensions:
+        - Name: ClusterName
+          Value: !Ref ECSCluster
+        EvaluationPeriods: 1
+        MetricName: MemoryReservation
+        Namespace: AWS/ECS
+        Period: 60
+        Statistic: Average
+        Threshold: 70
+        Unit: Percent
+
+  MemoryScaleDownAlarm:
+    Type: "AWS::CloudWatch::Alarm"
+    Properties:
+        ActionsEnabled: true
+        AlarmActions:
+        - !Ref ScaleDownPolicy
+        - !Ref SMSAlert
+        - !Ref EmailAlert
+        AlarmDescription: >
+            The memory utilization of the ECS cluster has dropped below 30% for more
+            than three minutes. Breaching this alarm should trigger an ASG scale in.
+        ComparisonOperator: LessThanOrEqualToThreshold
+        Dimensions:
+        - Name: ClusterName
+          Value: !Ref ECSCluster
+        EvaluationPeriods: 1
+        MetricName: MemoryReservation
+        Namespace: AWS/ECS
+        Period: 300
+        Statistic: Average
+        Threshold: 35
+        Unit: Percent
+
   ECSLaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
@@ -86,7 +190,7 @@ Resources:
           #Install CloudWatch agent to store logs of all containers in one group
           yum install -y https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
 
-          #Install cfn utility, which track changes to metadata to allow updating containers in case of changes in cfn templates
+          #Install cfn utility, which tracks changes to metadata to allow updating containers in case of changes in cfn templates
           yum install -y aws-cfn-bootstrap
 
           #Initialize this instance as a part of the ECS cluster

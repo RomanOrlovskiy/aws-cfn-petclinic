@@ -49,10 +49,20 @@ Resources:
       Parameters:
         EnvironmentName: !Ref AWS::StackName
         InstanceType: t2.medium
-        ClusterSize: 2
+        ClusterSize: "2"
+        ClusterSizeMax: "6"
         VPC: !GetAtt VPC.Outputs.VPC
         SecurityGroup: !GetAtt SecurityGroups.Outputs.ECSHostSecurityGroup
         Subnets: !GetAtt VPC.Outputs.PrivateSubnets
+
+  RDS:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.amazonaws.com/epam-phase3-aws-cfn-petclinic/infrastructure/rds-mysql.yaml
+      Parameters:
+        EcsSecurityGroup: !GetAtt SecurityGroups.Outputs.ECSHostSecurityGroup
+        VPC: !GetAtt VPC.Outputs.VPC
+        PrivateSubnets: !GetAtt VPC.Outputs.PrivateSubnets
 
   PetclinicService:
     Type: AWS::CloudFormation::Stack
@@ -61,14 +71,22 @@ Resources:
       Parameters:
         VPC: !GetAtt VPC.Outputs.VPC
         Cluster: !GetAtt ECS.Outputs.Cluster
-        DesiredCount: 4
+        DesiredCount: "4"
+        MaxCount: "12"
         LoadBalancerFullName: !GetAtt ALB.Outputs.LoadBalancerFullName
-        Listener: !GetAtt ALB.Outputs.Listener
+        Listener: !GetAtt ALB.Outputs.HttpsListener
+        DefaultTargetGroup: !GetAtt ALB.Outputs.DefaultTargetGroup
+        DefaultTargetGroupFullName: !GetAtt ALB.Outputs.DefaultTargetGroupFullName
         Path: /
         ECSServiceAutoScalingRoleARN: !GetAtt ECS.Outputs.ECSServiceAutoScalingRole
+        JDBCConnectionString: !GetAtt RDS.Outputs.PetClinicDBJDBCConnectionString
+        DBPassword: !GetAtt RDS.Outputs.DBPassword
+        DBUser: !GetAtt RDS.Outputs.DBUser
+        ContainerImageName: 414831080620.dkr.ecr.us-west-2.amazonaws.com/petclinic
+        ImageVersion: latest
 
 Outputs:
 
   PetclinicServiceUrl:
     Description: The URL endpoint for the petclinic service
-    Value: !Join ["", [!GetAtt ALB.Outputs.LoadBalancerUrl, "/"]]
+    Value: !Join ["", ["https://", !GetAtt ALB.Outputs.LoadBalancerUrl]]

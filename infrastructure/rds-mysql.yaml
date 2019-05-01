@@ -1,0 +1,107 @@
+Parameters:
+  DBName:
+    Default: petclinic
+    Description: The database name
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.
+  DBUser:
+    Default: root
+    NoEcho: 'true'
+    Description: The database admin account username
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.
+  DBPassword:
+    Default: petclinic
+    NoEcho: 'true'
+    Description: The database admin account password
+    Type: String
+    MinLength: '1'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]+'
+    ConstraintDescription: must contain only alphanumeric characters.
+  DBAllocatedStorage:
+    Default: '5'
+    Description: The size of the database (Gb)
+    Type: Number
+    MinValue: '5'
+    MaxValue: '30'
+    ConstraintDescription: must be between 20 and 30Gb.
+  DBInstanceClass:
+    Description: The database instance type
+    Type: String
+    Default: db.t2.micro
+    AllowedValues: [db.t2.micro, db.t2.small, db.t2.medium, db.t2.large]
+    ConstraintDescription: must select a valid database instance type.
+  EcsSecurityGroup:
+    Description: The EC2 security group that contains instances that need access to
+      the database
+    Type: AWS::EC2::SecurityGroup::Id
+    AllowedPattern: '[a-zA-Z0-9\-]+'
+    ConstraintDescription: must be a valid security group name.
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: Choose which VPC the security groups should be deployed to
+  PrivateSubnets:
+    Description: Choose in which subnets this RDS instance should be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+
+Resources:
+  DBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: Open database for access
+      SecurityGroupIngress:
+      - FromPort: 3306
+        IpProtocol: tcp
+        SourceSecurityGroupId:
+          Ref: EcsSecurityGroup
+        ToPort: 3306
+      # SecurityGroupIngress:
+      #   # Only allow inbound access to ECS from the ELB
+      #   - SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
+      #     IpProtocol: "-1"
+
+  PetClinicDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: !Ref DBName
+      AllocatedStorage: !Ref DBAllocatedStorage
+      DBInstanceClass: !Ref DBInstanceClass
+      Engine: MySQL
+      MasterUsername: !Ref DBUser
+      MasterUserPassword: !Ref DBPassword
+      DBSubnetGroupName: !Ref PetClinicSubnetGroup
+      VPCSecurityGroups:
+      - Fn::GetAtt:
+        - DBSecurityGroup
+        - GroupId
+
+  PetClinicSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnets available for the RDS DB Instance
+      SubnetIds:
+      - !Select [ 0, !Ref PrivateSubnets ]
+      - !Select [ 1, !Ref PrivateSubnets ]
+
+
+Outputs:
+  PetClinicDBJDBCConnectionString:
+    Description: JDBC connection string for the master database
+    Value: !Join ['', ['jdbc:mysql://', !GetAtt [PetClinicDB, Endpoint.Address], ':',
+        !GetAtt [PetClinicDB, Endpoint.Port], /, !Ref 'DBName']]
+  DBUser:
+    Description: Database user name
+    Value: !Ref DBUser
+  DBPassword:
+    Description: Database password
+    Value: !Ref DBPassword

@@ -38,6 +38,37 @@ Parameters:
     Description: The ECS service auto scaling role ARN
     Type: String
 
+  DefaultTargetGroup:
+    Description: Default target group ARN
+    Type: String
+
+  DefaultTargetGroupFullName:
+    Description: Default target group full name
+    Type: String
+
+  JDBCConnectionString:
+    Description: Petclinic RDS connecting String
+    Type: String
+
+  ContainerImageName:
+    Default: 414831080620.dkr.ecr.us-west-2.amazonaws.com/petclinic
+    Description: Docker container image name
+    Type: String
+
+  DBPassword:
+    Description: The database admin account password
+    Type: String
+
+  DBUser:
+    Description: The database admin account
+    Type: String
+
+  ImageVersion:
+    Default: latest
+    Description: Docker image version to be deployed
+    Type: String
+
+
 Resources:
   Service:
     Type: AWS::ECS::Service
@@ -50,7 +81,7 @@ Resources:
       LoadBalancers:
         - ContainerName: "petclinic-service"
           ContainerPort: 8080
-          TargetGroupArn: !Ref TargetGroup
+          TargetGroupArn: !Ref DefaultTargetGroup
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -59,13 +90,12 @@ Resources:
       ContainerDefinitions:
         - Name: petclinic-service
           Essential: true
-          Image: tomcat:8.5 #using empty tomcat container for now
-          #Image: BUILD AND DEPLOY PETCLINIC IMAGE TO ECR
-          #Image: 275396840892.dkr.ecr.us-east-1.amazonaws.com/ecs-refarch-cloudformation/website-service:1.0.0
+          #Image: !Ref ContainerImageName
+          Image: !Join
+            - ''
+            - - !Ref ContainerImageName
+              - !Ref ImageVersion
           Memory: 1024
-          #Environment:
-            #- Name: PRODUCT_SERVICE_URL
-            #  Value: #!Ref ProductServiceUrl
           PortMappings:
             - ContainerPort: 8080
           LogConfiguration:
@@ -73,26 +103,25 @@ Resources:
             Options:
               awslogs-group: !Ref CloudWatchLogsGroup
               awslogs-region: !Ref AWS::Region
+          Environment:
+            - Name: DATABASE
+              Value: mysql
+            - Name: SPRING_DATASOURCE_URL
+              Value: !Ref JDBCConnectionString
+            - Name: SPRING_DATASOURCE_USERNAME
+              Value: !Ref DBUser
+            - Name: SPRING_DATASOURCE_PASSWORD
+              Value: !Ref DBPassword
+            - Name: SPRING_DATASOURCE_INITIALIZATION_MODE
+              Value: always
+            - Name: SPRING_DATASOURCE_CONTINUE_ON_ERROR
+              Value: 'true'
 
   CloudWatchLogsGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Ref AWS::StackName
       RetentionInDays: 365
-
-  TargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      VpcId: !Ref VPC
-      Port: 80
-      Protocol: HTTP
-      Matcher:
-        HttpCode: 200-299
-      HealthCheckIntervalSeconds: 10
-      HealthCheckPath: /
-      HealthCheckProtocol: HTTP
-      HealthCheckTimeoutSeconds: 5
-      HealthyThresholdCount: 2
 
   ListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
@@ -104,7 +133,7 @@ Resources:
           Values:
             - !Ref Path
       Actions:
-        - TargetGroupArn: !Ref TargetGroup
+        - TargetGroupArn: !Ref DefaultTargetGroup
           Type: forward
 
   # This IAM Role grants the service access to register/unregister with the
@@ -199,10 +228,12 @@ Resources:
       Namespace: AWS/ApplicationELB
       MetricName: RequestCountPerTarget
       Dimensions:
+        # - Name: TargetGroup
+        #   Value: !GetAtt DefaultTargetGroup.TargetGroupFullName
         - Name: TargetGroup
-          Value: !GetAtt TargetGroup.TargetGroupFullName
+          Value: !Ref DefaultTargetGroupFullName
       Statistic: Sum
-      Period: 60
+      Period: 300
       EvaluationPeriods: 1
       Threshold: 5
       ComparisonOperator: LessThanThreshold
@@ -217,8 +248,10 @@ Resources:
       Namespace: AWS/ApplicationELB
       MetricName: RequestCountPerTarget
       Dimensions:
+        # - Name: TargetGroup
+        #   Value: !GetAtt DefaultTargetGroup.TargetGroupFullName
         - Name: TargetGroup
-          Value: !GetAtt TargetGroup.TargetGroupFullName
+          Value: !Ref DefaultTargetGroupFullName
       Statistic: Sum
       Period: 60
       EvaluationPeriods: 1
