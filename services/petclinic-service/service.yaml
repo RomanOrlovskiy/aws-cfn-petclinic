@@ -85,7 +85,7 @@ Resources:
           Essential: true
           #Image: !Ref ContainerImageName
           Image: !Join
-            - ''
+            - ':'
             - - !Ref ContainerImageName
               - !Ref ImageVersion
           Memory: 1024
