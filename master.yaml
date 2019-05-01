@@ -51,7 +51,6 @@ Resources:
         InstanceType: t2.medium
         ClusterSize: "2"
         ClusterSizeMax: "6"
-        VPC: !GetAtt VPC.Outputs.VPC
         SecurityGroup: !GetAtt SecurityGroups.Outputs.ECSHostSecurityGroup
         Subnets: !GetAtt VPC.Outputs.PrivateSubnets
 
@@ -69,11 +68,9 @@ Resources:
     Properties:
       TemplateURL: https://s3.amazonaws.com/epam-phase3-aws-cfn-petclinic/services/petclinic-service/service.yaml
       Parameters:
-        VPC: !GetAtt VPC.Outputs.VPC
         Cluster: !GetAtt ECS.Outputs.Cluster
         DesiredCount: "4"
         MaxCount: "12"
-        LoadBalancerFullName: !GetAtt ALB.Outputs.LoadBalancerFullName
         Listener: !GetAtt ALB.Outputs.HttpsListener
         DefaultTargetGroup: !GetAtt ALB.Outputs.DefaultTargetGroup
         DefaultTargetGroupFullName: !GetAtt ALB.Outputs.DefaultTargetGroupFullName
