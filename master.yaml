@@ -10,6 +10,11 @@ Description: >
 
   Finally, it deploys a pair of example ECS services from containers published in
   Amazon EC2 Container Registry (Amazon ECR).
+Parameters:
+  ImageVersion:
+    Default: "latest"
+    Description: Docker image version to be deployed
+    Type: String
 
 Resources:
   VPC:
@@ -48,7 +53,7 @@ Resources:
       TemplateURL: https://s3.amazonaws.com/epam-phase3-aws-cfn-petclinic/infrastructure/ecs-cluster.yaml
       Parameters:
         EnvironmentName: !Ref AWS::StackName
-        InstanceType: t2.medium
+        InstanceType: t2.micro
         ClusterSize: "2"
         ClusterSizeMax: "6"
         SecurityGroup: !GetAtt SecurityGroups.Outputs.ECSHostSecurityGroup
@@ -80,7 +85,7 @@ Resources:
         DBPassword: !GetAtt RDS.Outputs.DBPassword
         DBUser: !GetAtt RDS.Outputs.DBUser
         ContainerImageName: 414831080620.dkr.ecr.us-west-2.amazonaws.com/petclinic
-        ImageVersion: latest
+        ImageVersion: !Ref ImageVersion
 
 Outputs:
 

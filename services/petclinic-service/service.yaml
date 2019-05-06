@@ -57,7 +57,6 @@ Parameters:
     Type: String
 
   ImageVersion:
-    Default: latest
     Description: Docker image version to be deployed
     Type: String
 
@@ -68,7 +67,7 @@ Resources:
     DependsOn: ListenerRule
     Properties:
       Cluster: !Ref Cluster
-      Role: !Ref ServiceRole
+      Role: !GetAtt ServiceRole.Arn # !Ref ServiceRole
       DesiredCount: !Ref DesiredCount
       TaskDefinition: !Ref TaskDefinition
       LoadBalancers:
@@ -88,7 +87,7 @@ Resources:
             - ':'
             - - !Ref ContainerImageName
               - !Ref ImageVersion
-          Memory: 1024
+          Memory: 255
           PortMappings:
             - ContainerPort: 8080
           LogConfiguration:
@@ -216,8 +215,8 @@ Resources:
   RequestScaleInAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: Request count is less than 5 per Target
-      AlarmDescription: Alarm if request count is less than 5 per Target per one period
+      AlarmName: Request count is less than 10 per Target
+      AlarmDescription: Alarm if request count is less than 10 per Target per one period
       Namespace: AWS/ApplicationELB
       MetricName: RequestCountPerTarget
       Dimensions:
@@ -228,7 +227,7 @@ Resources:
       Statistic: Sum
       Period: 300
       EvaluationPeriods: 1
-      Threshold: 5
+      Threshold: 10
       ComparisonOperator: LessThanThreshold
       AlarmActions:
         - !Ref ServiceScaleInPolicy
@@ -236,8 +235,8 @@ Resources:
   RequestScaleOutAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: Request count is more than 50 requests per Target
-      AlarmDescription: Alarm if request count is more than 50 requests per Target per one period
+      AlarmName: Request count is more than 100 requests per Target
+      AlarmDescription: Alarm if request count is more than 100 requests per Target per one period
       Namespace: AWS/ApplicationELB
       MetricName: RequestCountPerTarget
       Dimensions:
@@ -248,7 +247,7 @@ Resources:
       Statistic: Sum
       Period: 60
       EvaluationPeriods: 1
-      Threshold: 50
+      Threshold: 100
       ComparisonOperator: GreaterThanThreshold
       AlarmActions:
         - !Ref ServiceScaleOutPolicy
