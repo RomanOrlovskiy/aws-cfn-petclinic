@@ -22,7 +22,7 @@ Resources:
       VpcId: !Ref VPC
       GroupDescription: Access to the ECS hosts and the tasks/containers that run on them
       SecurityGroupIngress:
-        # Only allow inbound access to ECS from the ELB
+        # Only allow inbound access to ECS from the ALB
         - SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
           IpProtocol: "-1"
       Tags:
@@ -30,15 +30,13 @@ Resources:
           Value: !Sub ${EnvironmentName}-ECS-Hosts
 
   # This security group defines who/where is allowed to access the Application Load Balancer.
-  # By default, we've opened this up to the public internet (0.0.0.0/0) but can you restrict
-  # it further if you want.
   LoadBalancerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       VpcId: !Ref VPC
       GroupDescription: Access to the load balancer that sits in front of ECS
       SecurityGroupIngress:
-        # Allow access from anywhere to our ECS services
+        # Allow access from anywhere
         - CidrIp: 0.0.0.0/0
           IpProtocol: "-1"
       Tags:

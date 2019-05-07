@@ -1,6 +1,5 @@
 Description: >
-  This is an example of a long running ECS service that needs to connect to another ECS service (product-service)
-  via it's load balancer. We use environment variables to pass the URL of the product-service to this one's container(s).
+  Petclinic ECS service.
 
 Parameters:
 
@@ -114,7 +113,7 @@ Resources:
               Value:
                 Fn::ImportValue: !Sub "${InfrastructureStackName}-PetClinicDBUser"
             - Name: SPRING_DATASOURCE_PASSWORD
-              Value: 
+              Value:
                 Fn::ImportValue: !Sub "${InfrastructureStackName}-PetClinicDBPassword"
             - Name: SPRING_DATASOURCE_INITIALIZATION_MODE
               Value: always
