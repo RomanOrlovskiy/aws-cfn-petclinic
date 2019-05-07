@@ -71,7 +71,7 @@ Resources:
       Protocol: HTTP
       Matcher:
         HttpCode: 200-299
-      HealthCheckIntervalSeconds: 10
+      HealthCheckIntervalSeconds: 30
       HealthCheckPath: /
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
