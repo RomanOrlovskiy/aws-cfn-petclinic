@@ -10,6 +10,11 @@ Description: >
 
   Finally, it deploys a pair of example ECS services from containers published in
   Amazon EC2 Container Registry (Amazon ECR).
+Parameters:
+  ImageVersion:
+    Default: "latest"
+    Description: Docker image version to be deployed
+    Type: String
 
 Resources:
   VPC:
@@ -63,61 +68,27 @@ Resources:
         VPC: !GetAtt VPC.Outputs.VPC
         PrivateSubnets: !GetAtt VPC.Outputs.PrivateSubnets
 
-  # PetclinicService:
-  #   Type: AWS::CloudFormation::Stack
-  #   Properties:
-  #     TemplateURL: https://s3.amazonaws.com/epam-phase3-aws-cfn-petclinic/services/petclinic-service/service.yaml
-  #     Parameters:
-  #       DesiredCount: "4"
-  #       MaxCount: "12"
-  #       Path: /
-  #       ContainerImageName: 414831080620.dkr.ecr.us-west-2.amazonaws.com/petclinic
-  #       ImageVersion: !Ref ImageVersion
-  #       Listener: !GetAtt ALB.Outputs.HttpsListener
-  #       DefaultTargetGroup: !GetAtt ALB.Outputs.DefaultTargetGroup
-  #       DefaultTargetGroupFullName: !GetAtt ALB.Outputs.DefaultTargetGroupFullName
-  #       ECSCluster:  !!!<<<<<< remove parameters in service
-  #       ECSServiceAutoScalingRoleARN: !GetAtt ECS.Outputs.ECSServiceAutoScalingRole
-  #       JDBCConnectionString: !GetAtt RDS.Outputs.PetClinicDBJDBCConnectionString
-  #       DBPassword: !GetAtt RDS.Outputs.DBPassword
-  #       DBUser: !GetAtt RDS.Outputs.DBUser
-  #
+  PetclinicService:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.amazonaws.com/epam-phase3-aws-cfn-petclinic/services/petclinic-service/service.yaml
+      Parameters:
+        Cluster: !GetAtt ECS.Outputs.Cluster
+        DesiredCount: "4"
+        MaxCount: "12"
+        Listener: !GetAtt ALB.Outputs.HttpsListener
+        DefaultTargetGroup: !GetAtt ALB.Outputs.DefaultTargetGroup
+        DefaultTargetGroupFullName: !GetAtt ALB.Outputs.DefaultTargetGroupFullName
+        Path: /
+        ECSServiceAutoScalingRoleARN: !GetAtt ECS.Outputs.ECSServiceAutoScalingRole
+        JDBCConnectionString: !GetAtt RDS.Outputs.PetClinicDBJDBCConnectionString
+        DBPassword: !GetAtt RDS.Outputs.DBPassword
+        DBUser: !GetAtt RDS.Outputs.DBUser
+        ContainerImageName: 414831080620.dkr.ecr.us-west-2.amazonaws.com/petclinic
+        ImageVersion: !Ref ImageVersion
 
 Outputs:
 
   PetclinicServiceUrl:
     Description: The URL endpoint for the petclinic service
     Value: !Join ["", ["https://", !GetAtt ALB.Outputs.LoadBalancerUrl]]
-  #Exporting shared parameters
-  ECSCluster:
-    Value: !GetAtt ECS.Outputs.Cluster
-    Export:
-      Name: !Sub "${AWS::StackName}-ECSCluster"
-  HttpsListener:
-    Value: !GetAtt ALB.Outputs.HttpsListener
-    Export:
-      Name: !Sub "${AWS::StackName}-HttpsListener"
-  DefaultTargetGroup:
-    Value: !GetAtt ALB.Outputs.DefaultTargetGroup
-    Export:
-      Name: !Sub "${AWS::StackName}-DefaultTargetGroup"
-  DefaultTargetGroupFullName:
-    Value: !GetAtt ALB.Outputs.DefaultTargetGroupFullName
-    Export:
-      Name: !Sub "${AWS::StackName}-DefaultTargetGroupFullName"
-  ECSServiceAutoScalingRoleARN:
-    Value: !GetAtt ECS.Outputs.ECSServiceAutoScalingRole
-    Export:
-      Name: !Sub "${AWS::StackName}-ECSServiceAutoScalingRoleARN"
-  PetClinicDBJDBCConnectionString:
-    Value: !GetAtt RDS.Outputs.PetClinicDBJDBCConnectionString
-    Export:
-      Name: !Sub "${AWS::StackName}-PetClinicDBJDBCConnectionString"
-  PetClinicDBPassword:
-    Value: !GetAtt RDS.Outputs.DBPassword
-    Export:
-      Name: !Sub "${AWS::StackName}-PetClinicDBPassword"
-  PetClinicDBUser:
-    Value: !GetAtt RDS.Outputs.DBUser
-    Export:
-      Name: !Sub "${AWS::StackName}-PetClinicDBUser"

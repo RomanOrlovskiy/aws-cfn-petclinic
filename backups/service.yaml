@@ -4,16 +4,10 @@ Description: >
 
 Parameters:
 
-  #Required parameters
-  ImageVersion:
-    Description: Petclinic application version to be deployed
+  Cluster:
+    Description: Please provide the ECS Cluster ID that this service should run on
     Type: String
 
-  InfrastructureStackName:
-    Description: Reference to the infrastructure stack with all the resources for the service
-    Type: String
-
-  #Optional parameters
   DesiredCount:
     Description: How many instances of this task should we run across our cluster?
     Type: Number
@@ -24,48 +18,47 @@ Parameters:
     Type: Number
     Default: 10
 
+  Listener:
+    Description: The Application Load Balancer listener to register with
+    Type: String
+
   Path:
     Description: The path to register with the Application Load Balancer
     Type: String
     Default: /
+
+  ECSServiceAutoScalingRoleARN:
+    Description: The ECS service auto scaling role ARN
+    Type: String
+
+  DefaultTargetGroup:
+    Description: Default target group ARN
+    Type: String
+
+  DefaultTargetGroupFullName:
+    Description: Default target group full name
+    Type: String
+
+  JDBCConnectionString:
+    Description: Petclinic RDS connecting String
+    Type: String
 
   ContainerImageName:
     Default: 414831080620.dkr.ecr.us-west-2.amazonaws.com/petclinic
     Description: Docker container image name
     Type: String
 
-  # ECSCluster:
-  #   Description: Please provide the ECS Cluster ID that this service should run on
-  #   Type: String
-  #
-  # HttpsListener:
-  #   Description: The Application Load Balancer listener to register with
-  #   Type: String
-  #
-  # ECSServiceAutoScalingRoleARN:
-  #   Description: The ECS service auto scaling role ARN
-  #   Type: String
-  #
-  # DefaultTargetGroup:
-  #   Description: Default target group ARN
-  #   Type: String
-  #
-  # DefaultTargetGroupFullName:
-  #   Description: Default target group full name
-  #   Type: String
-  #
-  # PetClinicDBJDBCConnectionString:
-  #   Description: Petclinic RDS connecting String
-  #   Type: String
-  #
-  #
-  # PetClinicDBPassword:
-  #   Description: The database admin account password
-  #   Type: String
-  #
-  # PetClinicDBUser:
-  #   Description: The database admin account
-  #   Type: String
+  DBPassword:
+    Description: The database admin account password
+    Type: String
+
+  DBUser:
+    Description: The database admin account
+    Type: String
+
+  ImageVersion:
+    Description: Docker image version to be deployed
+    Type: String
 
 
 Resources:
@@ -73,16 +66,14 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn: ListenerRule
     Properties:
-      Cluster:
-        Fn::ImportValue: !Sub "${InfrastructureStackName}-ECSCluster"
-      Role: !GetAtt ServiceRole.Arn
+      Cluster: !Ref Cluster
+      Role: !GetAtt ServiceRole.Arn # !Ref ServiceRole
       DesiredCount: !Ref DesiredCount
       TaskDefinition: !Ref TaskDefinition
       LoadBalancers:
         - ContainerName: "petclinic-service"
           ContainerPort: 8080
-          TargetGroupArn:
-            Fn::ImportValue: !Sub "${InfrastructureStackName}-DefaultTargetGroup"
+          TargetGroupArn: !Ref DefaultTargetGroup
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -108,14 +99,11 @@ Resources:
             - Name: DATABASE
               Value: mysql
             - Name: SPRING_DATASOURCE_URL
-              Value:
-                Fn::ImportValue: !Sub "${InfrastructureStackName}-PetClinicDBJDBCConnectionString"
+              Value: !Ref JDBCConnectionString
             - Name: SPRING_DATASOURCE_USERNAME
-              Value:
-                Fn::ImportValue: !Sub "${InfrastructureStackName}-PetClinicDBUser"
+              Value: !Ref DBUser
             - Name: SPRING_DATASOURCE_PASSWORD
-              Value: 
-                Fn::ImportValue: !Sub "${InfrastructureStackName}-PetClinicDBPassword"
+              Value: !Ref DBPassword
             - Name: SPRING_DATASOURCE_INITIALIZATION_MODE
               Value: always
             - Name: SPRING_DATASOURCE_CONTINUE_ON_ERROR
@@ -130,16 +118,14 @@ Resources:
   ListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
-      ListenerArn:
-        Fn::ImportValue: !Sub "${InfrastructureStackName}-HttpsListener"
+      ListenerArn: !Ref Listener
       Priority: 1
       Conditions:
         - Field: path-pattern
           Values:
             - !Ref Path
       Actions:
-        - TargetGroupArn:
-            Fn::ImportValue: !Sub "${InfrastructureStackName}-DefaultTargetGroup"
+        - TargetGroupArn: !Ref DefaultTargetGroup
           Type: forward
 
   # This IAM Role grants the service access to register/unregister with the
@@ -192,10 +178,9 @@ Resources:
       ResourceId: !Join
         - /
         - - service
-          - Fn::ImportValue: !Sub "${InfrastructureStackName}-ECSCluster"
+          - !Ref Cluster
           - !GetAtt Service.Name
-      RoleARN:
-        Fn::ImportValue: !Sub "${InfrastructureStackName}-ECSServiceAutoScalingRoleARN"
+      RoleARN: !Ref ECSServiceAutoScalingRoleARN
       ScalableDimension: ecs:service:DesiredCount
       ServiceNamespace: ecs
 
@@ -235,9 +220,10 @@ Resources:
       Namespace: AWS/ApplicationELB
       MetricName: RequestCountPerTarget
       Dimensions:
+        # - Name: TargetGroup
+        #   Value: !GetAtt DefaultTargetGroup.TargetGroupFullName
         - Name: TargetGroup
-          Value:
-            Fn::ImportValue: !Sub "${InfrastructureStackName}-DefaultTargetGroupFullName"
+          Value: !Ref DefaultTargetGroupFullName
       Statistic: Sum
       Period: 300
       EvaluationPeriods: 1
@@ -254,9 +240,10 @@ Resources:
       Namespace: AWS/ApplicationELB
       MetricName: RequestCountPerTarget
       Dimensions:
+        # - Name: TargetGroup
+        #   Value: !GetAtt DefaultTargetGroup.TargetGroupFullName
         - Name: TargetGroup
-          Value:
-            Fn::ImportValue: !Sub "${InfrastructureStackName}-DefaultTargetGroupFullName"
+          Value: !Ref DefaultTargetGroupFullName
       Statistic: Sum
       Period: 60
       EvaluationPeriods: 1
