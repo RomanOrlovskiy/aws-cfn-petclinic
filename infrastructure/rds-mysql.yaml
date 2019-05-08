@@ -76,28 +76,28 @@ Resources:
       MasterUsername: !Ref DBUser
       MasterUserPassword: !Ref DBPassword
       DBSubnetGroupName: !Ref PetClinicSubnetGroup
-      # DBParameterGroupName: !Ref RDSDBParameterGroup
-      # EnableCloudwatchLogsExports:
-      #   - error
-      #   - general
-      #   - slowquery
+      DBParameterGroupName: !Ref RDSDBParameterGroup
+      EnableCloudwatchLogsExports:
+        - error
+        - general
+        - slowquery
       VPCSecurityGroups:
       - Fn::GetAtt:
         - DBSecurityGroup
         - GroupId
 
-  # RDSDBParameterGroup:
-  #   Type: "AWS::RDS::DBParameterGroup"
-  #   Properties:
-  #     Description: "MySQL 5.7 Parameter Group"
-  #     Family: "mysql5.7"
-  #     Parameters:
-  #       log_output: "FILE"
-  #       general_log: "1"
-  #       slow_query_log: "1"
-  #       long_query_time: "10"
-  #       log_queries_not_using_indexes: "1"
-  #       net_read_timeout: "60"
+  RDSDBParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: "MySQL 5.7 Parameter Group"
+      Family: "mysql5.7"
+      Parameters:
+        log_output: "FILE"
+        general_log: "1"
+        slow_query_log: "1"
+        long_query_time: "10"
+        log_queries_not_using_indexes: "1"
+        net_read_timeout: "60"
 
   PetClinicSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup

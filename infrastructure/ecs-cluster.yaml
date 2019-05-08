@@ -15,12 +15,12 @@ Parameters:
   ClusterSize:
     Description: How many ECS hosts do you want to initially deploy?
     Type: Number
-    Default: 2
+    Default: 4
 
   ClusterSizeMax:
     Description: How many ECS hosts do you want to initially deploy?
     Type: Number
-    Default: 6
+    Default: 10
 
   Subnets:
     Description: Choose which subnets this ECS cluster should be deployed to

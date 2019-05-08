@@ -60,7 +60,7 @@ Resources:
             - ':'
             - - !Ref ContainerImageName
               - !Ref ImageVersion
-          Memory: 275
+          Memory: 360
           PortMappings:
             - ContainerPort: 8080
           LogConfiguration:
