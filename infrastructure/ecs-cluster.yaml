@@ -22,10 +22,6 @@ Parameters:
     Type: Number
     Default: 6
 
-  # VPC:
-  #   Description: Choose which VPC this ECS cluster should be deployed to
-  #   Type: AWS::EC2::VPC::Id
-
   Subnets:
     Description: Choose which subnets this ECS cluster should be deployed to
     Type: List<AWS::EC2::Subnet::Id>

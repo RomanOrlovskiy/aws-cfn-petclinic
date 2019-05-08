@@ -16,12 +16,12 @@ Parameters:
   DesiredCount:
     Description: How many instances of this task should we run across our cluster?
     Type: Number
-    Default: 2
+    Default: 4
 
   MaxCount:
     Description: Maximum number of instances of this task we can run across our cluster
     Type: Number
-    Default: 10
+    Default: 12
 
   Path:
     Description: The path to register with the Application Load Balancer
@@ -32,40 +32,6 @@ Parameters:
     Default: 414831080620.dkr.ecr.us-west-2.amazonaws.com/petclinic
     Description: Docker container image name
     Type: String
-
-  # ECSCluster:
-  #   Description: Please provide the ECS Cluster ID that this service should run on
-  #   Type: String
-  #
-  # HttpsListener:
-  #   Description: The Application Load Balancer listener to register with
-  #   Type: String
-  #
-  # ECSServiceAutoScalingRoleARN:
-  #   Description: The ECS service auto scaling role ARN
-  #   Type: String
-  #
-  # DefaultTargetGroup:
-  #   Description: Default target group ARN
-  #   Type: String
-  #
-  # DefaultTargetGroupFullName:
-  #   Description: Default target group full name
-  #   Type: String
-  #
-  # PetClinicDBJDBCConnectionString:
-  #   Description: Petclinic RDS connecting String
-  #   Type: String
-  #
-  #
-  # PetClinicDBPassword:
-  #   Description: The database admin account password
-  #   Type: String
-  #
-  # PetClinicDBUser:
-  #   Description: The database admin account
-  #   Type: String
-
 
 Resources:
   Service:
@@ -90,12 +56,11 @@ Resources:
       ContainerDefinitions:
         - Name: petclinic-service
           Essential: true
-          #Image: !Ref ContainerImageName
           Image: !Join
             - ':'
             - - !Ref ContainerImageName
               - !Ref ImageVersion
-          Memory: 340
+          Memory: 275
           PortMappings:
             - ContainerPort: 8080
           LogConfiguration:
