@@ -76,7 +76,7 @@ Resources:
       MasterUsername: !Ref DBUser
       MasterUserPassword: !Ref DBPassword
       DBSubnetGroupName: !Ref PetClinicSubnetGroup
-      DBParameterGroupName : !Ref RDSDBParameterGroup
+      DBParameterGroupName: !Ref RDSDBParameterGroup
       EnableCloudwatchLogsExports:
         - error
         - general
