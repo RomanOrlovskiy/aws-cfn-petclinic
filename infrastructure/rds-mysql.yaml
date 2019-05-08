@@ -65,10 +65,6 @@ Resources:
         SourceSecurityGroupId:
           Ref: EcsSecurityGroup
         ToPort: 3306
-      # SecurityGroupIngress:
-      #   # Only allow inbound access to ECS from the ELB
-      #   - SourceSecurityGroupId: !Ref LoadBalancerSecurityGroup
-      #     IpProtocol: "-1"
 
   PetClinicDB:
     Type: AWS::RDS::DBInstance
@@ -80,10 +76,28 @@ Resources:
       MasterUsername: !Ref DBUser
       MasterUserPassword: !Ref DBPassword
       DBSubnetGroupName: !Ref PetClinicSubnetGroup
+      DBParameterGroupName : !Ref RDSDBParameterGroup
+      EnableCloudwatchLogsExports:
+        - error
+        - general
+        - slowquery
       VPCSecurityGroups:
       - Fn::GetAtt:
         - DBSecurityGroup
         - GroupId
+
+  RDSDBParameterGroup:
+    Type: "AWS::RDS::DBParameterGroup"
+    Properties:
+      Description: "MySQL 5.6 Parameter Group"
+      Family: "mysql5.6"
+      Parameters:
+        log_output: "FILE"
+        general_log: "1"
+        slow_query_log: "1"
+        long_query_time: "10"
+        log_queries_not_using_indexes: "1"
+        net_read_timeout: "60"
 
   PetClinicSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
