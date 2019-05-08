@@ -79,8 +79,8 @@ Resources:
       DBParameterGroupName: !Ref RDSDBParameterGroup
       EnableCloudwatchLogsExports:
         - error
-        - general
-        - slowquery
+        # - general
+        # - slowquery
       VPCSecurityGroups:
       - Fn::GetAtt:
         - DBSecurityGroup
@@ -93,11 +93,11 @@ Resources:
       Family: "mysql5.7"
       Parameters:
         log_output: "FILE"
-        general_log: "1"
-        slow_query_log: "1"
-        long_query_time: "10"
-        log_queries_not_using_indexes: "1"
-        net_read_timeout: "60"
+        # general_log: "1"
+        # slow_query_log: "1"
+        # long_query_time: "10"
+        # log_queries_not_using_indexes: "1"
+        # net_read_timeout: "60"
 
   PetClinicSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
