@@ -1,12 +1,12 @@
 {
-     "Comment": "Creating Alias resource record sets in Route 53",
+     "Comment": "Creating CNAME resource record sets in Route 53",
      "Changes": [{
                 "Action": "UPSERT",
                 "ResourceRecordSet": {
                             "Name": "petclinic.quitequiet.net",
                             "Type": "A",
                             "AliasTarget":{
-                                    "HostedZoneId": "Z2LRPVRK54W3FS",
+                                    "HostedZoneId": "Z1H1FL5HABSF5",
                                     "DNSName": "{ALB_URL_PLACEHOLDER}",
                                     "EvaluateTargetHealth": false
                               }}
